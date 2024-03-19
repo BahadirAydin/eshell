@@ -1,3 +1,4 @@
+#include "eshell.h"
 #include "parser.h"
 #include <iostream>
 
@@ -18,7 +19,6 @@ auto readstdin(const char *prompt) -> char * {
 auto main() -> int {
     parsed_input input;
     char *line = nullptr;
-    while (line == nullptr || strcmp(line, "quit") != 0) {
     while (true) {
         line = readstdin("/> ");
         // NOTE: i assumed no need to call parse_line
@@ -32,6 +32,7 @@ auto main() -> int {
             exit(1);
         }
         // pretty_print(&input);
+        eshell::run(input);
         free_parsed_input(&input);
     }
     return 0;

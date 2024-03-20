@@ -7,15 +7,14 @@ ESH_PATH="../eshell"
 INPUT_DIR="./input"
 OUTPUT_DIR="./output"
 
-# Initialize counters
 PASSED=0
 TOTAL=0
 
 # Define color codes
 GREEN='\033[0;32m'
 RED='\033[0;31m'
-YELLOW='\033[1;33m' # Yellow
-CYAN='\033[0;36m' # Cyan
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Function to compare outputs and log results
@@ -39,7 +38,7 @@ compare_and_log() {
         local lower_limit=$(echo "$expected_info" | awk '{print $1}')
         local upper_limit=$(echo "$expected_info" | awk '{print $2}')
         
-        expected_output=$(cat "$OUTPUT_DIR/$output_file" | head -n -1)
+        expected_output=$(echo "$expected_info" | awk '{print $3}')
 
         # Perform time comparison using awk for floating-point support
         local time_check_pass=$(echo | awk -v elapsed="$elapsed" -v lower="$lower_limit" -v upper="$upper_limit" '
@@ -54,10 +53,12 @@ compare_and_log() {
             ((PASSED++))
         else
             echo -e "Test $test_name ${YELLOW}(timed)${NC}: ${RED}FAIL${NC} (Elapsed: $elapsed, Limits: $lower_limit-$upper_limit)"
+            if [[ "$actual_output" != "$expected_output" ]]; then
             echo "Expected:"
             echo "$expected_output"
             echo "Actual:"
             echo "$actual_output"
+            fi
         fi
     else
         local actual_output=$(cat "$INPUT_DIR/$input_file" | "$ESH_PATH" | head -n -2)
@@ -84,7 +85,6 @@ for input_path in "$INPUT_DIR"/*.in; do
     # Construct the expected output file name by changing the extension from .in to .out
     output_file="${input_file%.in}.out"
 
-    # Check if the corresponding output file exists
     if [[ -f "$OUTPUT_DIR/$output_file" ]]; then
         compare_and_log "$input_file" "$output_file"
     else

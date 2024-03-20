@@ -14,7 +14,8 @@ TOTAL=0
 # Define color codes
 GREEN='\033[0;32m'
 RED='\033[0;31m'
-BLUE='\033[0;34m' # Blue
+YELLOW='\033[1;33m' # Yellow
+CYAN='\033[0;36m' # Cyan
 NC='\033[0m' # No Color
 
 # Function to compare outputs and log results
@@ -49,10 +50,10 @@ compare_and_log() {
         ')
 
         if [[ "$actual_output" == "$expected_output" ]] && [[ "$time_check_pass" -eq 1 ]]; then
-            echo -e "Test $test_name (timed): ${GREEN}PASS${NC} (Elapsed: $elapsed, Limits: $lower_limit-$upper_limit)"
+            echo -e "Test $test_name ${YELLOW}(timed)${NC}: ${GREEN}PASS${NC} (Elapsed: $elapsed, Limits: $lower_limit-$upper_limit)"
             ((PASSED++))
         else
-            echo -e "Test $test_name (timed): ${RED}FAIL${NC} (Elapsed: $elapsed, Limits: $lower_limit-$upper_limit)"
+            echo -e "Test $test_name ${YELLOW}(timed)${NC}: ${RED}FAIL${NC} (Elapsed: $elapsed, Limits: $lower_limit-$upper_limit)"
             echo "Expected:"
             echo "$expected_output"
             echo "Actual:"
@@ -91,6 +92,11 @@ for input_path in "$INPUT_DIR"/*.in; do
     fi
 done
 
-# Print summary of results
-echo -e "${BLUE}Summary: $PASSED/$TOTAL${NC}"
+# Calculate the percentage of passed tests
+if [ "$TOTAL" -gt 0 ]; then
+    percentage=$(echo "scale=2; $PASSED/$TOTAL*100" | bc)
+else
+    percentage=0
+fi
+echo -e "${CYAN}Grade: $PASSED/$TOTAL ($percentage%)${NC}"
 

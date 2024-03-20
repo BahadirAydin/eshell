@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Path to eshell executable
-ESH_PATH="/home/bahadir/BahadirAydin/Akademi/CENG334/operating-systems-hw/hw1/eshell"
+ESH_PATH="../eshell"
 
 # Directory containing input and expected output files
 INPUT_DIR="./input"

@@ -74,3 +74,19 @@ auto execute::execute_pipeline(std::vector<command> &cmds) -> void {
         }
     }
 }
+
+auto execute::execute_parallel(std::vector<command> &cmds) -> void {
+    size_t num_cmds = cmds.size();
+    for (size_t i = 0; i < num_cmds; i++) {
+        pid_t child_pid = fork();
+        if (child_pid == 0) { // CHILD PROCESS
+            int status = execvp(cmds[i].args[0], cmds[i].args);
+            if (status) {
+                failed_to_execute();
+            }
+        }
+    }
+    for (size_t i = 0; i < num_cmds; i++) {
+        wait(nullptr);
+    }
+}

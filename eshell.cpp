@@ -6,7 +6,7 @@ auto eshell::run_pipelined_cmds(const pipeline &p) -> void {
     for (int i = 0; i < num_cmds; i++) {
         cmds.push_back(p.commands[i]);
     }
-    execute::execute_pipeline(cmds);
+    execute::execute_pipeline_concurrent(cmds, true);
 }
 
 // determines the order of the commands from the parsed_input struct
@@ -70,7 +70,7 @@ auto eshell::run(parsed_input &input) -> void {
         }
     }
     if (pipeline_cmds.size() > 0) {
-        execute::execute_pipeline(pipeline_cmds);
+        execute::execute_pipeline_concurrent(pipeline_cmds,true);
         pipeline_cmds.clear();
     }
     if (parallel_cmds.size() > 0) {
@@ -78,7 +78,7 @@ auto eshell::run(parsed_input &input) -> void {
         parallel_cmds.clear();
     }
     if (parallel_plines.size() > 0) {
-        // HACK: i am not really sure how this works
+        // HACK: i am not really sure how and why flushing works
         // but it makes it so that i pass my blackbox test
         // it does not make any difference in interactive mode
         std::flush(std::cout);

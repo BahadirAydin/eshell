@@ -7,15 +7,14 @@ ESH_PATH="../eshell"
 INPUT_DIR="./input"
 OUTPUT_DIR="./output"
 
-# Initialize counters
 PASSED=0
 TOTAL=0
 
 # Define color codes
 GREEN='\033[0;32m'
 RED='\033[0;31m'
-YELLOW='\033[1;33m' # Yellow
-CYAN='\033[0;36m' # Cyan
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Function to compare outputs and log results
@@ -84,7 +83,6 @@ for input_path in "$INPUT_DIR"/*.in; do
     # Construct the expected output file name by changing the extension from .in to .out
     output_file="${input_file%.in}.out"
 
-    # Check if the corresponding output file exists
     if [[ -f "$OUTPUT_DIR/$output_file" ]]; then
         compare_and_log "$input_file" "$output_file"
     else

@@ -38,7 +38,7 @@ compare_and_log() {
         local lower_limit=$(echo "$expected_info" | awk '{print $1}')
         local upper_limit=$(echo "$expected_info" | awk '{print $2}')
         
-        expected_output=$(cat "$OUTPUT_DIR/$output_file" | head -n -1)
+        expected_output=$(echo "$expected_info" | awk '{print $3}')
 
         # Perform time comparison using awk for floating-point support
         local time_check_pass=$(echo | awk -v elapsed="$elapsed" -v lower="$lower_limit" -v upper="$upper_limit" '
@@ -53,10 +53,12 @@ compare_and_log() {
             ((PASSED++))
         else
             echo -e "Test $test_name ${YELLOW}(timed)${NC}: ${RED}FAIL${NC} (Elapsed: $elapsed, Limits: $lower_limit-$upper_limit)"
+            if [[ "$actual_output" != "$expected_output" ]]; then
             echo "Expected:"
             echo "$expected_output"
             echo "Actual:"
             echo "$actual_output"
+            fi
         fi
     else
         local actual_output=$(cat "$INPUT_DIR/$input_file" | "$ESH_PATH" | head -n -2)

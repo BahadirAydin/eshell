@@ -1,7 +1,11 @@
 #!/bin/bash
 
-# Path to eshell executable
-ESH_PATH="../eshell"
+# Path to eshell directory
+ESH_DIR=".."
+# Executable name
+ESH_EXEC="eshell"
+# Full path to eshell executable
+ESH_PATH="$ESH_DIR/$ESH_EXEC"
 
 # Directory containing input and expected output files
 INPUT_DIR="./input"
@@ -54,10 +58,10 @@ compare_and_log() {
         else
             echo -e "Test $test_name ${YELLOW}(timed)${NC}: ${RED}FAIL${NC} (Elapsed: $elapsed, Limits: $lower_limit-$upper_limit)"
             if [[ "$actual_output" != "$expected_output" ]]; then
-            echo "Expected:"
-            echo "$expected_output"
-            echo "Actual:"
-            echo "$actual_output"
+                echo "Expected:"
+                echo "$expected_output"
+                echo "Actual:"
+                echo "$actual_output"
             fi
         fi
     else
@@ -77,6 +81,15 @@ compare_and_log() {
     fi
     ((TOTAL++))
 }
+
+# Build the eshell executable using the Makefile
+echo "Building eshell..."
+(cd "$ESH_DIR" && make)
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Failed to build eshell. Aborting tests.${NC}"
+    exit 1
+fi
+echo -e "${GREEN}Build successful.${NC}"
 
 # Main loop to process each input file
 for input_path in "$INPUT_DIR"/*.in; do

@@ -32,7 +32,7 @@ compare_and_log() {
         local start_time=$(date +%s.%N)
 
         # Execute eshell and capture output
-        actual_output=$(cat "$INPUT_DIR/$input_file" | "$ESH_PATH" | head -n -2)
+        actual_output=$(cat "$INPUT_DIR/$input_file" | "$ESH_PATH" | head -n -1)
 
         local end_time=$(date +%s.%N)
         local elapsed=$(echo "$end_time - $start_time" | bc)
@@ -65,7 +65,7 @@ compare_and_log() {
             fi
         fi
     else
-        local actual_output=$(cat "$INPUT_DIR/$input_file" | "$ESH_PATH" | head -n -2)
+        local actual_output=$(cat "$INPUT_DIR/$input_file" | "$ESH_PATH" | head -n -1)
         local expected_output=$(cat "$OUTPUT_DIR/$output_file")
 
         if [[ "$actual_output" == "$expected_output" ]]; then

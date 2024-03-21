@@ -90,3 +90,22 @@ auto execute::execute_parallel(std::vector<command> &cmds) -> void {
         wait(nullptr);
     }
 }
+
+auto execute::execute_parallel_pipelines(std::vector<pipeline> &plines)
+    -> void {
+    size_t num_plines = plines.size();
+    for (size_t i = 0; i < num_plines; i++) {
+        pid_t child_pid = fork();
+        if (child_pid == 0) { // CHILD PROCESS
+            std::vector<command> cmds;
+            for (size_t j = 0; j < plines[i].num_commands; j++) {
+                cmds.push_back(plines[i].commands[j]);
+            }
+            execute_pipeline(cmds);
+            exit(0);
+        }
+    }
+    for (size_t i = 0; i < num_plines; i++) {
+        wait(nullptr);
+    }
+}

@@ -1,8 +1,18 @@
 #include "eshell.h"
 
+auto eshell::run_pipelined_cmds(const pipeline &p) -> void {
+    int num_cmds = p.num_commands;
+    std::vector<command> cmds;
+    for (int i = 0; i < num_cmds; i++) {
+        cmds.push_back(p.commands[i]);
+    }
+    execute::execute_pipeline(cmds);
+}
+
 // determines the order of the commands from the parsed_input struct
 auto eshell::run(parsed_input &input) -> void {
     int num_inputs = input.num_inputs;
+    Pipelines parallel_plines;
     std::vector<command> pipeline_cmds;
     std::vector<command> parallel_cmds;
 
@@ -28,12 +38,24 @@ auto eshell::run(parsed_input &input) -> void {
             break;
         }
         case INPUT_TYPE_PIPELINE: {
-            int num_cmds = cmd.data.pline.num_commands;
-            std::vector<command> cmds;
-            for (int j = 0; j < num_cmds; j++) {
-                cmds.push_back(cmd.data.pline.commands[j]);
+            switch (input.separator) {
+            case SEPARATOR_NONE: {
+                run_pipelined_cmds(cmd.data.pline);
+                break;
             }
-            execute::execute_pipeline(cmds);
+            case SEPARATOR_PIPE: {
+                std::cerr << "sep_pipe not implemented yet" << std::endl;
+                break;
+            }
+            case SEPARATOR_SEQ: {
+                run_pipelined_cmds(cmd.data.pline);
+                break;
+            }
+            case SEPARATOR_PARA: {
+                parallel_plines.push_back(cmd.data.pline);
+                break;
+            }
+            }
             break;
         }
         case INPUT_TYPE_SUBSHELL: {
@@ -49,8 +71,18 @@ auto eshell::run(parsed_input &input) -> void {
     }
     if (pipeline_cmds.size() > 0) {
         execute::execute_pipeline(pipeline_cmds);
+        pipeline_cmds.clear();
     }
     if (parallel_cmds.size() > 0) {
         execute::execute_parallel(parallel_cmds);
+        parallel_cmds.clear();
+    }
+    if (parallel_plines.size() > 0) {
+        // HACK: i am not really sure how this works
+        // but it makes it so that i pass my blackbox test
+        // it does not make any difference in interactive mode
+        std::flush(std::cout);
+        execute::execute_parallel_pipelines(parallel_plines);
+        parallel_plines.clear();
     }
 }

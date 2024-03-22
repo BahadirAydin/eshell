@@ -1,3 +1,6 @@
+#ifndef ESHELL_H
+#define ESHELL_H
+
 #include "execute.h"
 #include "parser.h"
 #include <iostream>
@@ -9,3 +12,5 @@ namespace eshell {
 auto run_pipelined_cmds(const pipeline &p) -> void;
 auto run(parsed_input &input) -> void;
 } // namespace eshell
+
+#endif // ESHELL_H

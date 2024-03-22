@@ -1,3 +1,6 @@
+#ifndef EXECUTE_H
+#define EXECUTE_H
+
 #include "parser.h"
 #include <iostream>
 #include <sys/wait.h>
@@ -18,3 +21,5 @@ auto execute_pipeline_concurrent(std::vector<command> &cmds, bool _wait)
 auto execute_parallel(std::vector<command> &cmds) -> void;
 auto execute_parallel_pipelines(std::vector<pipeline> &plines) -> void;
 } // namespace execute
+
+#endif // EXECUTE_H

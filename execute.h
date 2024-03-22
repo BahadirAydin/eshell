@@ -5,7 +5,7 @@
 #include <vector>
 
 namespace execute {
-auto close_all_pipes(int pipes[][2], size_t num_pipes) -> void;
+auto close_all_pipes(int pipes[][2], size_t n_pipes) -> void;
 auto failed_to_execute() -> void;
 auto failed_to_pipe() -> void;
 auto execute_single_command(command data) -> void;

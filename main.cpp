@@ -26,7 +26,7 @@ auto main() -> int {
         line = readstdin();
         // NOTE: i assumed no need to call parse_line
         // if line is null, it means EOF
-        if (!line || strcmp(line, "quit") == 0) {
+        if ((line == nullptr) || strcmp(line, "quit") == 0) {
             break;
         }
         int res = parse_line(line, &input);

@@ -13,13 +13,11 @@ auto execute::failed_to_pipe() -> void {
 auto execute::execute_single_command(command data) -> void {
 
     pid_t child_pid = fork();
-    if (child_pid) { // PARENT PROCESS
+    if (child_pid != 0) { // PARENT PROCESS
         wait(nullptr);
     } else { // CHILD PROCESS
-        int status = execvp(data.args[0], data.args);
-        if (status) {
-            failed_to_execute();
-        }
+        execvp(data.args[0], data.args);
+        failed_to_execute();
     }
 }
 
@@ -41,8 +39,8 @@ auto execute::execute_pipeline(std::vector<command> &cmds) -> void {
             }
         }
         pid_t child_pid = fork();
-        if (child_pid) {   // PARENT PROCESS
-            wait(nullptr); // pipe processes are sequential, we wait and reap
+        if (child_pid > 0) { // PARENT PROCESS
+            wait(nullptr);   // pipe processes are sequential, we wait and reap
             if (in != STDIN_FILENO) {
                 // closes the read end of the pipe, each time this is called
                 // a file descriptor is freed and the pipe is closed
@@ -67,10 +65,8 @@ auto execute::execute_pipeline(std::vector<command> &cmds) -> void {
                 dup2(fd[1], STDOUT_FILENO);
                 close(fd[1]);
             }
-            int status = execvp(cmds[i].args[0], cmds[i].args);
-            if (status) {
-                failed_to_execute();
-            }
+            execvp(cmds[i].args[0], cmds[i].args);
+            failed_to_execute();
         }
     }
 }
@@ -86,8 +82,9 @@ void execute::execute_pipeline_concurrent(std::vector<command> &cmds,
                                           bool _wait) {
     size_t n_cmds = cmds.size();
     size_t n_pipes = n_cmds - 1;
-    if (n_cmds == 0)
+    if (n_cmds == 0) {
         return;
+    }
     // create n-1 pipes for n commands
     int pipes[n_pipes][2];
     for (size_t i = 0; i < n_cmds - 1; ++i) {
@@ -135,10 +132,8 @@ auto execute::execute_parallel(std::vector<command> &cmds) -> void {
     for (size_t i = 0; i < n_cmds; i++) {
         pid_t child_pid = fork();
         if (child_pid == 0) { // CHILD PROCESS
-            int status = execvp(cmds[i].args[0], cmds[i].args);
-            if (status) {
-                failed_to_execute();
-            }
+            execvp(cmds[i].args[0], cmds[i].args);
+            failed_to_execute();
         }
     }
     for (size_t i = 0; i < n_cmds; i++) {
@@ -148,15 +143,16 @@ auto execute::execute_parallel(std::vector<command> &cmds) -> void {
 
 auto execute::execute_parallel_pipelines(std::vector<pipeline> &plines)
     -> void {
-    size_t num_plines = plines.size();
-    for (size_t i = 0; i < num_plines; i++) {
-        std::vector<command> cmds;
+    size_t n_plines = plines.size();
+    for (size_t i = 0; i < n_plines; i++) {
+        int n_cmds = plines[i].num_commands;
+        std::vector<command> cmds(n_cmds);
         for (size_t j = 0; j < plines[i].num_commands; j++) {
-            cmds.push_back(plines[i].commands[j]);
+            cmds[j] = plines[i].commands[j];
         }
         execute_pipeline_concurrent(cmds, false);
     }
-    for (size_t i = 0; i < num_plines; i++) {
+    for (size_t i = 0; i < n_plines; i++) {
         for (size_t j = 0; j < plines[i].num_commands; j++) {
             wait(nullptr);
         }

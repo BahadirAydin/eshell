@@ -29,11 +29,7 @@ auto main() -> int {
         if ((line == nullptr) || strcmp(line, "quit") == 0) {
             break;
         }
-        int res = parse_line(line, &input);
-        if (res == -1) {
-            std::cout << "Error parsing input\n";
-            exit(1);
-        }
+        parse_line(line, &input);
         // pretty_print(&input);
         eshell::run(input);
         free_parsed_input(&input);

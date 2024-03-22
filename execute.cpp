@@ -152,6 +152,7 @@ auto execute::execute_parallel_pipelines(std::vector<pipeline> &plines)
         }
         execute_pipeline_concurrent(cmds, false);
     }
+    // wait for all the children in all parallel subprocesses to finish
     for (size_t i = 0; i < n_plines; i++) {
         for (size_t j = 0; j < plines[i].num_commands; j++) {
             wait(nullptr);

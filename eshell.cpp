@@ -1,4 +1,5 @@
 #include "eshell.h"
+#include "parser.h"
 
 auto eshell::run_pipelined_cmds(const pipeline &p) -> void {
     int num_cmds = p.num_commands;
@@ -60,7 +61,15 @@ auto eshell::run(parsed_input &input) -> void {
             break;
         }
         case INPUT_TYPE_SUBSHELL: {
-            std::cerr << "Subshell not implemented yet" << std::endl;
+            std::optional<parsed_input> subshell_input =
+                execute::execute_subshell(cmd.data.subshell);
+            if (subshell_input.has_value()) {
+                // fork returned from child
+                run(subshell_input.value());
+            } else {
+                // fork returned from parent
+                // do nothing
+            }
             break;
         }
         case INPUT_TYPE_NON: {

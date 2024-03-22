@@ -3,6 +3,7 @@
 
 #include "parser.h"
 #include <iostream>
+#include <optional>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <vector>
@@ -20,6 +21,7 @@ auto execute_pipeline_concurrent(std::vector<command> &cmds, bool _wait)
     -> void;
 auto execute_parallel(std::vector<command> &cmds) -> void;
 auto execute_parallel_pipelines(std::vector<pipeline> &plines) -> void;
+auto execute_subshell(char *subshell) -> std::optional<parsed_input>;
 } // namespace execute
 
 #endif // EXECUTE_H

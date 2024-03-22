@@ -162,3 +162,14 @@ auto execute::execute_parallel_pipelines(std::vector<pipeline> &plines)
         }
     }
 }
+
+auto execute::execute_subshell(char *subshell) -> std::optional<parsed_input> {
+    pid_t child_pid = fork();
+    if (child_pid == 0) { // CHILD PROCESS
+        parsed_input input;
+        parse_line(subshell, &input);
+        return input;
+    }
+    waitpid(child_pid, nullptr, 0);
+    return std::nullopt;
+}

@@ -78,7 +78,7 @@ auto eshell::run(parsed_input &input) -> void {
         parallel_cmds.clear();
     }
     if (parallel_plines.size() > 0) {
-        // HACK: i am not really sure how this works
+        // HACK: i am not really sure how and why flushing works
         // but it makes it so that i pass my blackbox test
         // it does not make any difference in interactive mode
         std::flush(std::cout);

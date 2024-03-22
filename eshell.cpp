@@ -2,9 +2,10 @@
 
 auto eshell::run_pipelined_cmds(const pipeline &p) -> void {
     int num_cmds = p.num_commands;
-    std::vector<command> cmds;
+    std::vector<command> cmds(num_cmds);
+    cmds.reserve(num_cmds);
     for (int i = 0; i < num_cmds; i++) {
-        cmds.push_back(p.commands[i]);
+        cmds[i] = p.commands[i];
     }
     execute::execute_pipeline_concurrent(cmds, true);
 }
@@ -69,15 +70,15 @@ auto eshell::run(parsed_input &input) -> void {
         }
         }
     }
-    if (pipeline_cmds.size() > 0) {
-        execute::execute_pipeline_concurrent(pipeline_cmds,true);
+    if (!pipeline_cmds.empty()) {
+        execute::execute_pipeline_concurrent(pipeline_cmds, true);
         pipeline_cmds.clear();
     }
-    if (parallel_cmds.size() > 0) {
+    if (!parallel_cmds.empty()) {
         execute::execute_parallel(parallel_cmds);
         parallel_cmds.clear();
     }
-    if (parallel_plines.size() > 0) {
+    if (!parallel_plines.empty()) {
         // HACK: i am not really sure how and why flushing works
         // but it makes it so that i pass my blackbox test
         // it does not make any difference in interactive mode

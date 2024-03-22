@@ -3,8 +3,10 @@
 #include <cstring>
 #include <iostream>
 
-auto readstdin(const char *prompt) -> char * {
-    std::cout << prompt;
+#define PROMPT "/> "
+auto print_prompt() -> void { std::cout << PROMPT; }
+
+auto readstdin() -> char * {
     char *line = nullptr;
     size_t size = 0;
     // this is stdio.h getline, easier than cpp one which uses strings
@@ -23,23 +25,20 @@ auto main() -> int {
     parsed_input input;
     char *line = nullptr;
     while (true) {
-        line = readstdin("/> ");
+        print_prompt();
+        line = readstdin();
         // NOTE: i assumed no need to call parse_line
         // if line is null, it means EOF
-        if (!line) {
+        if (line == nullptr) {
             break;
         }
         if (strcmp(line, "quit") == 0) {
             free(line);
             break;
         }
-        int res = parse_line(line, &input);
+        parse_line(line, &input);
         // parse_line copies what it needs, so line can be freed here
         free(line);
-        if (res == -1) {
-            std::cout << "Error parsing input\n";
-            exit(1);
-        }
         // pretty_print(&input);
         eshell::run(input);
         free_parsed_input(&input);

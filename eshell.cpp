@@ -1,10 +1,10 @@
 #include "eshell.h"
+#include "execute.h"
 #include "parser.h"
 
 auto eshell::run_pipelined_cmds(const pipeline &p) -> void {
     int num_cmds = p.num_commands;
     std::vector<command> cmds(num_cmds);
-    cmds.reserve(num_cmds);
     for (int i = 0; i < num_cmds; i++) {
         cmds[i] = p.commands[i];
     }
@@ -61,8 +61,22 @@ auto eshell::run(parsed_input &input) -> void {
             break;
         }
         case INPUT_TYPE_SUBSHELL: {
-            std::optional<parsed_input> subshell_input =
-                execute::execute_subshell(cmd.data.subshell);
+            std::optional<parsed_input> subshell_input;
+            if (!pipeline_cmds.empty()) {
+                int pipefd[2];
+                if (pipe(pipefd) == -1) {
+                    execute::failed_to_pipe();
+                }
+                execute::execute_pipeline_concurrent(pipeline_cmds, true,
+                                                     pipefd[1]);
+                close(pipefd[1]);
+                pipeline_cmds.clear();
+                subshell_input =
+                    execute::execute_subshell(cmd.data.subshell, pipefd[0]);
+                close(pipefd[0]);
+            } else {
+                subshell_input = execute::execute_subshell(cmd.data.subshell);
+            }
             if (subshell_input.has_value()) {
                 // fork returned from child
                 run(subshell_input.value());

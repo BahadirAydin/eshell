@@ -1,6 +1,7 @@
 # Prerequisites
 *.d
 eshell
+resources/
 
 # Compiled Object files
 *.slo

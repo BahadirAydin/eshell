@@ -79,7 +79,7 @@ void execute::close_all_pipes(int pipes[][2], size_t n_pipes) {
 }
 
 void execute::execute_pipeline_concurrent(std::vector<command> &cmds,
-                                          bool _wait) {
+                                          bool _wait, int out_fd) {
     size_t n_cmds = cmds.size();
     size_t n_pipes = n_cmds - 1;
     if (n_cmds == 0) {
@@ -104,6 +104,12 @@ void execute::execute_pipeline_concurrent(std::vector<command> &cmds,
                 // redirect output to the next pipe
                 dup2(pipes[i][1], STDOUT_FILENO);
             }
+            if (i == 0 && out_fd != -1) {
+                dup2(out_fd, STDOUT_FILENO);
+                close(out_fd);
+            } else if (out_fd != -1) {
+                close(out_fd);
+            }
 
             // we call this for every child because
             // each child has different file descriptors
@@ -116,6 +122,9 @@ void execute::execute_pipeline_concurrent(std::vector<command> &cmds,
     }
     // this is for closing the pipes in the parent process
     close_all_pipes(pipes, n_cmds - 1);
+    if (out_fd != -1) {
+        close(out_fd);
+    }
     // if i want to busy wait for the children to finish
     // i can call wait here by calling the function with _wait = true
     // but if i want to execute other commands in parallel
@@ -160,9 +169,14 @@ auto execute::execute_parallel_pipelines(std::vector<pipeline> &plines)
     }
 }
 
-auto execute::execute_subshell(char *subshell) -> std::optional<parsed_input> {
+auto execute::execute_subshell(char *subshell, int in_fd)
+    -> std::optional<parsed_input> {
     pid_t child_pid = fork();
     if (child_pid == 0) { // CHILD PROCESS
+        if (in_fd != -1) {
+            dup2(in_fd, STDIN_FILENO);
+            close(in_fd);
+        }
         parsed_input input;
         parse_line(subshell, &input);
         return input;

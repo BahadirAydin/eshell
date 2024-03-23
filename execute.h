@@ -17,11 +17,12 @@ auto execute_single_command(command data) -> void;
 // i'm using execute_pipeline_concurrent instead
 // this is just here for reference
 auto execute_pipeline(std::vector<command> &cmds) -> void;
-auto execute_pipeline_concurrent(std::vector<command> &cmds, bool _wait)
-    -> void;
+auto execute_pipeline_concurrent(std::vector<command> &cmds, bool _wait,
+                                 int out_fd = -1) -> void;
 auto execute_parallel(std::vector<command> &cmds) -> void;
 auto execute_parallel_pipelines(std::vector<pipeline> &plines) -> void;
-auto execute_subshell(char *subshell) -> std::optional<parsed_input>;
+auto execute_subshell(char *subshell, int in_fd = -1)
+    -> std::optional<parsed_input>;
 } // namespace execute
 
 #endif // EXECUTE_H

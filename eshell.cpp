@@ -4,7 +4,6 @@
 auto eshell::run_pipelined_cmds(const pipeline &p) -> void {
     int num_cmds = p.num_commands;
     std::vector<command> cmds(num_cmds);
-    cmds.reserve(num_cmds);
     for (int i = 0; i < num_cmds; i++) {
         cmds[i] = p.commands[i];
     }

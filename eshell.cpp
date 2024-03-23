@@ -66,6 +66,7 @@ auto eshell::run(parsed_input &input) -> void {
             if (subshell_input.has_value()) {
                 // fork returned from child
                 run(subshell_input.value());
+                exit(0);
             } else {
                 // fork returned from parent
                 // do nothing

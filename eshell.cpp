@@ -62,28 +62,72 @@ auto eshell::run(parsed_input &input) -> void {
         }
         case INPUT_TYPE_SUBSHELL: {
             std::optional<parsed_input> subshell_input;
-            if (!pipeline_cmds.empty()) {
+            if (!pipeline_cmds.empty() && i != num_inputs - 1) {
                 int pipefd[2];
                 if (pipe(pipefd) == -1) {
                     execute::failed_to_pipe();
                 }
-                execute::execute_pipeline_concurrent(pipeline_cmds, true,
+                execute::execute_pipeline_concurrent(pipeline_cmds, true, -1,
+                                                     pipefd[1]);
+                close(pipefd[1]);
+                pipeline_cmds.clear();
+
+                i++;
+                while (input.inputs[i].type == INPUT_TYPE_COMMAND) {
+                    pipeline_cmds.push_back(input.inputs[i].data.cmd);
+                    i++;
+                }
+                std::optional<std::vector<command>> opt_pipeline_cmds;
+                if (!pipeline_cmds.empty()) {
+                    opt_pipeline_cmds = std::make_optional(pipeline_cmds);
+                }
+                pipeline_cmds.clear();
+                subshell_input = execute::execute_subshell(
+                    cmd.data.subshell, pipefd[0], true, opt_pipeline_cmds);
+                if (subshell_input.has_value()) {
+                    run(subshell_input.value());
+                    exit(0);
+                }
+            } else if (!pipeline_cmds.empty()) {
+                int pipefd[2];
+                if (pipe(pipefd) == -1) {
+                    execute::failed_to_pipe();
+                }
+                execute::execute_pipeline_concurrent(pipeline_cmds, true, -1,
                                                      pipefd[1]);
                 close(pipefd[1]);
                 pipeline_cmds.clear();
                 subshell_input =
                     execute::execute_subshell(cmd.data.subshell, pipefd[0]);
+                if (subshell_input.has_value()) {
+                    run(subshell_input.value());
+                    exit(0);
+                }
                 close(pipefd[0]);
+            } else if (i != num_inputs - 1) {
+                i++;
+                while (input.inputs[i].type == INPUT_TYPE_COMMAND) {
+                    pipeline_cmds.push_back(input.inputs[i].data.cmd);
+                    i++;
+                }
+                std::optional<std::vector<command>> opt_pipeline_cmds;
+                if (!pipeline_cmds.empty()) {
+                    opt_pipeline_cmds = std::make_optional(pipeline_cmds);
+                }
+                pipeline_cmds.clear();
+                subshell_input = execute::execute_subshell(
+                    cmd.data.subshell, -1, true, opt_pipeline_cmds);
+                if (subshell_input.has_value()) {
+                    run(subshell_input.value());
+                    exit(0);
+                }
             } else {
                 subshell_input = execute::execute_subshell(cmd.data.subshell);
-            }
-            if (subshell_input.has_value()) {
-                // fork returned from child
-                run(subshell_input.value());
-                exit(0);
-            } else {
-                // fork returned from parent
-                // do nothing
+                if (subshell_input.has_value()) {
+                    // fork returned from child
+                    run(subshell_input.value());
+                    exit(0);
+                }
             }
             break;
         }

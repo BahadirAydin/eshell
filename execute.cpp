@@ -79,7 +79,7 @@ void execute::close_all_pipes(int pipes[][2], size_t n_pipes) {
 }
 
 void execute::execute_pipeline_concurrent(std::vector<command> &cmds,
-                                          bool _wait, int out_fd) {
+                                          bool _wait, int in_fd, int out_fd) {
     size_t n_cmds = cmds.size();
     size_t n_pipes = n_cmds - 1;
     if (n_cmds == 0) {
@@ -92,7 +92,6 @@ void execute::execute_pipeline_concurrent(std::vector<command> &cmds,
             failed_to_pipe();
         }
     }
-
     for (size_t i = 0; i < n_cmds; ++i) {
         pid_t child_pid = fork();
         if (child_pid == 0) { // CHILD PROCESS
@@ -109,6 +108,12 @@ void execute::execute_pipeline_concurrent(std::vector<command> &cmds,
                 close(out_fd);
             } else if (out_fd != -1) {
                 close(out_fd);
+            }
+            if (i == 0 && in_fd != -1) {
+                dup2(in_fd, STDIN_FILENO);
+                close(in_fd);
+            } else if (in_fd != -1) {
+                close(in_fd);
             }
 
             // we call this for every child because
@@ -169,10 +174,23 @@ auto execute::execute_parallel_pipelines(std::vector<pipeline> &plines)
     }
 }
 
-auto execute::execute_subshell(char *subshell, int in_fd)
+auto execute::execute_subshell(
+    char *subshell, int in_fd, bool tie_to_stdout,
+    std::optional<std::vector<command>> pipeline_cmds)
     -> std::optional<parsed_input> {
+    int pipefd[2];
+    if (tie_to_stdout) {
+        if (pipe(pipefd) == -1) {
+            failed_to_pipe();
+        }
+    }
     pid_t child_pid = fork();
     if (child_pid == 0) { // CHILD PROCESS
+        if (tie_to_stdout) {
+            close(pipefd[0]);
+            dup2(pipefd[1], STDOUT_FILENO);
+            close(pipefd[1]);
+        }
         if (in_fd != -1) {
             dup2(in_fd, STDIN_FILENO);
             close(in_fd);
@@ -181,6 +199,10 @@ auto execute::execute_subshell(char *subshell, int in_fd)
         parse_line(subshell, &input);
         return input;
     }
+    close(pipefd[1]);
     wait(nullptr);
+    if (pipeline_cmds.has_value()) {
+        execute_pipeline_concurrent(pipeline_cmds.value(), true, pipefd[0], -1);
+    }
     return std::nullopt;
 }

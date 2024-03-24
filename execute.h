@@ -18,10 +18,12 @@ auto execute_single_command(command data) -> void;
 // this is just here for reference
 auto execute_pipeline(std::vector<command> &cmds) -> void;
 auto execute_pipeline_concurrent(std::vector<command> &cmds, bool _wait,
-                                 int out_fd = -1) -> void;
+                                 int in_fd = -1, int out_fd = -1) -> void;
 auto execute_parallel(std::vector<command> &cmds) -> void;
 auto execute_parallel_pipelines(std::vector<pipeline> &plines) -> void;
-auto execute_subshell(char *subshell, int in_fd = -1)
+auto execute_subshell(
+    char *subshell, int in_fd = -1, bool tie_to_stdout = false,
+    std::optional<std::vector<command>> pipeline_cmds = std::nullopt)
     -> std::optional<parsed_input>;
 } // namespace execute
 

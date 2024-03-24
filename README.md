@@ -1,0 +1,13 @@
+# ESHELL
+
+![cool meme](https://imgur.com/a/kaUyRk3)
+## Overview
+This project simulates a Linux shell, incorporating nearly all standard functionalities and additional extensions. I have done this project for CENG334: Operating Systems course.
+
+## Features
+- Executes Linux commands
+- Supports piping.
+- Supports parallel execution.
+- Supports sequential execution.
+- Supports subshells
+- No memory leaks.

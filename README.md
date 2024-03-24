@@ -1,6 +1,6 @@
 # ESHELL
 
-[Imgur](https://imgur.com/UwPdmpw.jpg)
+![cool meme](https://imgur.com/UwPdmpw.jpg)
 ## Overview
 This project simulates a Linux shell, incorporating nearly all standard functionalities and additional extensions. I have done this project for CENG334: Operating Systems course.
 

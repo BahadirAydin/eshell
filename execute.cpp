@@ -104,7 +104,7 @@ void execute::execute_pipeline_concurrent(std::vector<command> &cmds,
                 // redirect output to the next pipe
                 dup2(pipes[i][1], STDOUT_FILENO);
             }
-            if (i == 0 && out_fd != -1) {
+            if (i == n_cmds - 1 && out_fd != -1) {
                 dup2(out_fd, STDOUT_FILENO);
                 close(out_fd);
             } else if (out_fd != -1) {

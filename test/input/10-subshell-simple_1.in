@@ -1,0 +1,1 @@
+(grep "mi" lorem_ipsum.txt) | (sort) | (tail -n1)

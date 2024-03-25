@@ -328,6 +328,8 @@ int parse_line(char *line, parsed_input *input) {
                         return 0;
                     }
                     convert_to_pipeline(input);
+
+                    is_pipeline = 1;
                 }
                 buffer[buffer_index] = '\0';
                 write_buffer(input, buffer, 1, is_pipeline);
@@ -351,6 +353,8 @@ int parse_line(char *line, parsed_input *input) {
                         return 0;
                     }
                     convert_to_pipeline(input);
+
+                    is_pipeline = 1;
                 }
                 buffer[buffer_index] = '\0';
                 write_buffer(input, buffer, 1, is_pipeline);
@@ -417,6 +421,8 @@ int parse_line(char *line, parsed_input *input) {
                         return 0;
                     }
                     convert_to_pipeline(input);
+
+                    is_pipeline = 1;
                 }
                 buffer[buffer_index] = '\0';
                 write_buffer(input, buffer, 0, is_pipeline);
@@ -440,6 +446,8 @@ int parse_line(char *line, parsed_input *input) {
                         return 0;
                     }
                     convert_to_pipeline(input);
+
+                    is_pipeline = 1;
                 }
                 buffer[buffer_index] = '\0';
                 write_buffer(input, buffer, 0, is_pipeline);

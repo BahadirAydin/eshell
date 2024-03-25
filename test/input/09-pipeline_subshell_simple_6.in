@@ -1,0 +1,1 @@
+(echo "the biggest") | cut -c1-3 | ( xargs echo ) |  tr /a-z/ /A-Z/  | (tr /T/ /E/)

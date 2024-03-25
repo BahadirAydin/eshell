@@ -2,6 +2,7 @@
 #include "parser.h"
 #include <cstring>
 #include <iostream>
+#include <unistd.h>
 
 #define PROMPT "/> "
 auto print_prompt() -> void { std::cout << PROMPT; }
@@ -26,9 +27,9 @@ auto main() -> int {
     char *line = nullptr;
     while (true) {
         print_prompt();
-        line = readstdin();
         // NOTE: i assumed no need to call parse_line
         // if line is null, it means EOF
+        line = readstdin();
         if (line == nullptr) {
             break;
         }
@@ -36,11 +37,13 @@ auto main() -> int {
             free(line);
             break;
         }
+        std::flush(std::cout);
         parse_line(line, &input);
         // parse_line copies what it needs, so line can be freed here
         free(line);
         // pretty_print(&input);
-        eshell::run(input);
+        int in = -1;
+        eshell::run(input, in);
         free_parsed_input(&input);
     }
     return 0;

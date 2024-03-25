@@ -4,9 +4,7 @@
 
 auto eshell::run_pipelined_cmds(const pipeline &p) -> void {
     int num_cmds = p.num_commands;
-    std::vector<command> cmds(num_cmds);
-    for (int i = 0; i < num_cmds; i++) {
-        cmds[i] = p.commands[i];
+    std::vector<command> cmds(num_cmds); for (int i = 0; i < num_cmds; i++) { cmds[i] = p.commands[i];
     }
     execute::execute_pipeline_concurrent(cmds, true);
 }
@@ -105,9 +103,8 @@ auto eshell::run(parsed_input &input) -> void {
                 }
                 close(pipefd[0]);
             } else if (i != num_inputs - 1) {
-                i++;
-                while (input.inputs[i].type == INPUT_TYPE_COMMAND) {
-                    pipeline_cmds.push_back(input.inputs[i].data.cmd);
+                while (i < num_inputs && input.inputs[i+1].type == INPUT_TYPE_COMMAND) {
+                    pipeline_cmds.push_back(input.inputs[i+1].data.cmd);
                     i++;
                 }
                 std::optional<std::vector<command>> opt_pipeline_cmds;

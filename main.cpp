@@ -1,6 +1,7 @@
 #include "eshell.h"
 #include "parser.h"
 #include <iostream>
+#include <unistd.h>
 
 #define PROMPT "/> "
 auto print_prompt() -> void { std::cout << PROMPT; }
@@ -23,15 +24,17 @@ auto main() -> int {
     char *line = nullptr;
     while (true) {
         print_prompt();
-        line = readstdin();
         // NOTE: i assumed no need to call parse_line
         // if line is null, it means EOF
+        line = readstdin();
         if ((line == nullptr) || strcmp(line, "quit") == 0) {
             break;
         }
+        std::flush(std::cout);
         parse_line(line, &input);
         // pretty_print(&input);
-        eshell::run(input);
+        int in = -1;
+        eshell::run(input, in);
         free_parsed_input(&input);
     }
     return 0;

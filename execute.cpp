@@ -1,4 +1,5 @@
 #include "execute.h"
+#include "eshell.h"
 
 auto execute::failed_to_execute() -> void {
     std::cerr << "execute::failed to execute the command" << std::endl;
@@ -174,19 +175,17 @@ auto execute::execute_parallel_pipelines(std::vector<pipeline> &plines)
     }
 }
 
-auto execute::execute_subshell(
-    char *subshell, int in_fd, bool tie_to_stdout,
-    std::optional<std::vector<command>> pipeline_cmds)
-    -> std::optional<parsed_input> {
+auto execute::execute_subshell(char *subshell, int in_fd, bool last)
+    -> SubshellReturn {
     int pipefd[2];
-    if (tie_to_stdout) {
+    if (!last) {
         if (pipe(pipefd) == -1) {
             failed_to_pipe();
         }
     }
     pid_t child_pid = fork();
     if (child_pid == 0) { // CHILD PROCESS
-        if (tie_to_stdout) {
+        if (!last) {
             close(pipefd[0]);
             dup2(pipefd[1], STDOUT_FILENO);
             close(pipefd[1]);
@@ -197,12 +196,11 @@ auto execute::execute_subshell(
         }
         parsed_input input;
         parse_line(subshell, &input);
-        return input;
+        return SubshellReturn{input, return_type::CHILD, -1};
     }
-    close(pipefd[1]);
+    if (!last) {
+        close(pipefd[1]);
+    }
     wait(nullptr);
-    if (pipeline_cmds.has_value()) {
-        execute_pipeline_concurrent(pipeline_cmds.value(), true, pipefd[0], -1);
-    }
-    return std::nullopt;
+    return SubshellReturn{{}, return_type::PARENT, pipefd[0]};
 }

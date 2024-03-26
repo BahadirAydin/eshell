@@ -42,7 +42,7 @@ compare_and_log() {
         local lower_limit=$(echo "$expected_info" | awk '{print $1}')
         local upper_limit=$(echo "$expected_info" | awk '{print $2}')
         
-        expected_output=$(echo "$expected_info" | awk '{print $3}')
+        expected_output=$(echo "$expected_info" | awk '{if ($3 != "") print "/> " $3; else print ""}')
 
         # Perform time comparison using awk for floating-point support
         local time_check_pass=$(echo | awk -v elapsed="$elapsed" -v lower="$lower_limit" -v upper="$upper_limit" '
@@ -66,7 +66,7 @@ compare_and_log() {
         fi
     else
         local actual_output=$(cat "$INPUT_DIR/$input_file" | "$ESH_PATH" | head -n -1)
-        local expected_output=$(cat "$OUTPUT_DIR/$output_file")
+        local expected_output=$(sed '1s/^/\/> /' "$OUTPUT_DIR/$output_file")
 
         if [[ "$actual_output" == "$expected_output" ]]; then
             echo -e "Test $test_name: ${GREEN}PASS${NC}"
@@ -81,7 +81,6 @@ compare_and_log() {
     fi
     ((TOTAL++))
 }
-
 # Build the eshell executable using the Makefile
 echo "Building eshell..."
 (cd "$ESH_DIR" && make)

@@ -100,7 +100,7 @@ auto eshell::run(parsed_input &input, int &in) -> void {
                 close(pipefd[0]);
             } else if (i != num_inputs - 1) {
                 subshell_return =
-                    execute::execute_subshell(cmd.data.subshell, -1, false);
+                    execute::execute_subshell(cmd.data.subshell, in, false);
                 if (subshell_return.type == execute::return_type::CHILD) {
                     in = -1;
                     run(subshell_return.input, in);
@@ -109,11 +109,14 @@ auto eshell::run(parsed_input &input, int &in) -> void {
                     in = subshell_return.in;
                 }
             } else {
-                subshell_return = execute::execute_subshell(cmd.data.subshell);
+                subshell_return =
+                    execute::execute_subshell(cmd.data.subshell, in);
                 if (subshell_return.type == execute::return_type::CHILD) {
                     in = -1;
                     run(subshell_return.input, in);
                     exit(0);
+                } else {
+                    in = subshell_return.in;
                 }
             }
             break;

@@ -138,7 +138,7 @@ auto eshell::run(parsed_input &input, int &in) -> void {
         // but it makes it so that i pass my blackbox test
         // it does not make any difference in interactive mode
         // std::flush(std::cout);
-        execute::execute_parallel_pipelines(parallel_cmds);
+        execute::execute_parallel(parallel_cmds);
         parallel_cmds.clear();
     }
 }

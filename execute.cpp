@@ -94,7 +94,7 @@ void execute::execute_pipeline(std::vector<command> &cmds, bool _wait,
     }
 }
 
-auto execute::execute_parallel_pipelines(std::vector<ParallelCommand> &plines)
+auto execute::execute_parallel(std::vector<ParallelCommand> &plines)
     -> void {
     size_t n_plines = plines.size();
     for (size_t i = 0; i < n_plines; i++) {

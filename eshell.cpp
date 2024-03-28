@@ -2,7 +2,9 @@
 #include "execute.h"
 #include "parser.h"
 
-auto eshell::run_pipelined_cmds(const pipeline &p) -> void {
+namespace eshell {
+
+auto run_pipelined_cmds(const pipeline &p) -> void {
     int num_cmds = p.num_commands;
     std::vector<command> cmds(num_cmds);
     for (int i = 0; i < num_cmds; i++) {
@@ -11,7 +13,7 @@ auto eshell::run_pipelined_cmds(const pipeline &p) -> void {
     execute::execute_pipeline(cmds, true);
 }
 
-auto eshell::run(const parsed_input &input, int &in) -> void {
+auto run(const parsed_input &input, int &in) -> void {
     int num_inputs = input.num_inputs;
     std::vector<command> pipeline_cmds;
     std::vector<execute::ParallelCommand> parallel_cmds;
@@ -128,3 +130,4 @@ auto eshell::run(const parsed_input &input, int &in) -> void {
         parallel_cmds.clear();
     }
 }
+} // namespace eshell

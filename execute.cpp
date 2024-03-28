@@ -11,7 +11,7 @@ auto execute::failed_to_pipe() -> void {
     exit(1);
 }
 
-auto execute::execute_single_command(command data, bool wait_) -> void {
+auto execute::execute_single_command(const command &data, bool wait_) -> void {
 
     pid_t child_pid = fork();
     if (child_pid != 0) { // PARENT PROCESS
@@ -31,7 +31,7 @@ void execute::close_all_pipes(int pipes[][2], size_t n_pipes) {
     }
 }
 
-void execute::execute_pipeline(std::vector<command> &cmds, bool _wait,
+void execute::execute_pipeline(const std::vector<command> &cmds, bool _wait,
                                int in_fd, int out_fd) {
     size_t n_cmds = cmds.size();
     size_t n_pipes = n_cmds - 1;
@@ -94,7 +94,7 @@ void execute::execute_pipeline(std::vector<command> &cmds, bool _wait,
     }
 }
 
-auto execute::execute_parallel(std::vector<ParallelCommand> &plines)
+auto execute::execute_parallel(const std::vector<ParallelCommand> &plines)
     -> void {
     size_t n_plines = plines.size();
     for (size_t i = 0; i < n_plines; i++) {

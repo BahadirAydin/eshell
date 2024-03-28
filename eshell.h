@@ -10,7 +10,7 @@
 
 namespace eshell {
 auto run_pipelined_cmds(const pipeline &p) -> void;
-auto run(parsed_input &input, int &in) -> void;
+auto run(const parsed_input &input, int &in) -> void;
 } // namespace eshell
 
 #endif // ESHELL_H

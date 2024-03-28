@@ -11,8 +11,7 @@ auto eshell::run_pipelined_cmds(const pipeline &p) -> void {
     execute::execute_pipeline(cmds, true);
 }
 
-// determines the order of the commands from the parsed_input struct
-auto eshell::run(parsed_input &input, int &in) -> void {
+auto eshell::run(const parsed_input &input, int &in) -> void {
     int num_inputs = input.num_inputs;
     std::vector<command> pipeline_cmds;
     std::vector<execute::ParallelCommand> parallel_cmds;
@@ -72,7 +71,6 @@ auto eshell::run(parsed_input &input, int &in) -> void {
                 subshell_return = execute::execute_subshell(cmd.data.subshell,
                                                             pipefd[0], false);
                 if (subshell_return.type == execute::return_type::CHILD) {
-                    in = -1;
                     run(subshell_return.input, in);
                     exit(0);
                 } else {
@@ -90,7 +88,6 @@ auto eshell::run(parsed_input &input, int &in) -> void {
                 subshell_return =
                     execute::execute_subshell(cmd.data.subshell, pipefd[0]);
                 if (subshell_return.type == execute::return_type::CHILD) {
-                    in = -1;
                     run(subshell_return.input, in);
                     exit(0);
                 }
@@ -99,7 +96,6 @@ auto eshell::run(parsed_input &input, int &in) -> void {
                 subshell_return =
                     execute::execute_subshell(cmd.data.subshell, in, false);
                 if (subshell_return.type == execute::return_type::CHILD) {
-                    in = -1;
                     run(subshell_return.input, in);
                     exit(0);
                 } else {
@@ -109,7 +105,6 @@ auto eshell::run(parsed_input &input, int &in) -> void {
                 subshell_return =
                     execute::execute_subshell(cmd.data.subshell, in);
                 if (subshell_return.type == execute::return_type::CHILD) {
-                    in = -1;
                     run(subshell_return.input, in);
                     exit(0);
                 } else {

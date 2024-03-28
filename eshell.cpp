@@ -8,7 +8,7 @@ auto eshell::run_pipelined_cmds(const pipeline &p) -> void {
     for (int i = 0; i < num_cmds; i++) {
         cmds[i] = p.commands[i];
     }
-    execute::execute_pipeline_concurrent(cmds, true);
+    execute::execute_pipeline(cmds, true);
 }
 
 // determines the order of the commands from the parsed_input struct
@@ -66,8 +66,7 @@ auto eshell::run(parsed_input &input, int &in) -> void {
                 if (pipe(pipefd) == -1) {
                     execute::failed_to_pipe();
                 }
-                execute::execute_pipeline_concurrent(pipeline_cmds, true, in,
-                                                     pipefd[1]);
+                execute::execute_pipeline(pipeline_cmds, true, in, pipefd[1]);
                 close(pipefd[1]);
                 pipeline_cmds.clear();
                 subshell_return = execute::execute_subshell(cmd.data.subshell,
@@ -85,8 +84,7 @@ auto eshell::run(parsed_input &input, int &in) -> void {
                 if (pipe(pipefd) == -1) {
                     execute::failed_to_pipe();
                 }
-                execute::execute_pipeline_concurrent(pipeline_cmds, true, in,
-                                                     pipefd[1]);
+                execute::execute_pipeline(pipeline_cmds, true, in, pipefd[1]);
                 close(pipefd[1]);
                 pipeline_cmds.clear();
                 subshell_return =
@@ -129,9 +127,9 @@ auto eshell::run(parsed_input &input, int &in) -> void {
     }
     if (!pipeline_cmds.empty()) {
         if (in != -1) {
-            execute::execute_pipeline_concurrent(pipeline_cmds, true, in);
+            execute::execute_pipeline(pipeline_cmds, true, in);
         } else {
-            execute::execute_pipeline_concurrent(pipeline_cmds, true);
+            execute::execute_pipeline(pipeline_cmds, true);
         }
         pipeline_cmds.clear();
     }

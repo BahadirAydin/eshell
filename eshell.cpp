@@ -114,25 +114,16 @@ auto eshell::run(const parsed_input &input, int &in) -> void {
             break;
         }
         case INPUT_TYPE_NON: {
-            // this is not used anywhere in the code idk what it means
             std::cerr << "unknown case" << std::endl;
             exit(1);
         }
         }
     }
     if (!pipeline_cmds.empty()) {
-        if (in != -1) {
-            execute::execute_pipeline(pipeline_cmds, true, in);
-        } else {
-            execute::execute_pipeline(pipeline_cmds, true);
-        }
+        execute::execute_pipeline(pipeline_cmds, true, in);
         pipeline_cmds.clear();
     }
     if (!parallel_cmds.empty()) {
-        // HACK: i am not really sure how and why flushing works
-        // but it makes it so that i pass my blackbox test
-        // it does not make any difference in interactive mode
-        // std::flush(std::cout);
         execute::execute_parallel(parallel_cmds);
         parallel_cmds.clear();
     }

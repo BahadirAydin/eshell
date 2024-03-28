@@ -9,8 +9,6 @@
 #include <vector>
 
 namespace eshell {
-using Pipelines = std::vector<pipeline>;
-
 auto run_pipelined_cmds(const pipeline &p) -> void;
 auto run(parsed_input &input, int &in) -> void;
 } // namespace eshell

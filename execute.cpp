@@ -11,11 +11,13 @@ auto execute::failed_to_pipe() -> void {
     exit(1);
 }
 
-auto execute::execute_single_command(command data) -> void {
+auto execute::execute_single_command(command data, bool wait_) -> void {
 
     pid_t child_pid = fork();
     if (child_pid != 0) { // PARENT PROCESS
-        wait(nullptr);
+        if (wait_) {
+            wait(nullptr);
+        }
     } else { // CHILD PROCESS
         execvp(data.args[0], data.args);
         failed_to_execute();
@@ -142,36 +144,33 @@ void execute::execute_pipeline_concurrent(std::vector<command> &cmds,
     }
 }
 
-auto execute::execute_parallel(std::vector<command> &cmds) -> void {
-    size_t n_cmds = cmds.size();
-    for (size_t i = 0; i < n_cmds; i++) {
-        pid_t child_pid = fork();
-        if (child_pid == 0) { // CHILD PROCESS
-            execvp(cmds[i].args[0], cmds[i].args);
-            failed_to_execute();
-        }
-    }
-    for (size_t i = 0; i < n_cmds; i++) {
-        wait(nullptr);
-    }
-}
-
-auto execute::execute_parallel_pipelines(std::vector<pipeline> &plines)
+auto execute::execute_parallel_pipelines(std::vector<ParallelCommand> &plines)
     -> void {
     size_t n_plines = plines.size();
     for (size_t i = 0; i < n_plines; i++) {
-        int n_cmds = plines[i].num_commands;
+        if (plines[i].type == SINGLE_INPUT_TYPE::INPUT_TYPE_COMMAND) {
+            execute_single_command(plines[i].data.cmd, false);
+            continue;
+        }
+        int n_cmds = plines[i].data.pline.num_commands;
         std::vector<command> cmds(n_cmds);
-        for (size_t j = 0; j < plines[i].num_commands; j++) {
-            cmds[j] = plines[i].commands[j];
+        for (size_t j = 0; j < n_cmds; j++) {
+            cmds[j] = plines[i].data.pline.commands[j];
         }
         execute_pipeline_concurrent(cmds, false);
     }
     // wait for all the children in all parallel subprocesses to finish
     for (size_t i = 0; i < n_plines; i++) {
-        for (size_t j = 0; j < plines[i].num_commands; j++) {
+        if (plines[i].type == SINGLE_INPUT_TYPE::INPUT_TYPE_COMMAND) {
+            wait(nullptr);
+            continue;
+        }
+        int n_cmds = plines[i].data.pline.num_commands;
+        for (size_t j = 0; j < n_cmds; j++) {
             wait(nullptr);
         }
+        // i didn't do error handling here but only acceptable types are COMMAND and PIPELINE
+        // other cases should not happen ever.
     }
 }
 

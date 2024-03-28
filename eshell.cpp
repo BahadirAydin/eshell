@@ -14,9 +14,8 @@ auto eshell::run_pipelined_cmds(const pipeline &p) -> void {
 // determines the order of the commands from the parsed_input struct
 auto eshell::run(parsed_input &input, int &in) -> void {
     int num_inputs = input.num_inputs;
-    Pipelines parallel_plines;
     std::vector<command> pipeline_cmds;
-    std::vector<command> parallel_cmds;
+    std::vector<execute::ParallelCommand> parallel_cmds;
 
     for (int i = 0; i < num_inputs; i++) {
         single_input cmd = input.inputs[i];
@@ -34,7 +33,7 @@ auto eshell::run(parsed_input &input, int &in) -> void {
                 execute::execute_single_command(cmd.data.cmd);
                 break;
             case SEPARATOR_PARA:
-                parallel_cmds.push_back(cmd.data.cmd);
+                parallel_cmds.push_back({INPUT_TYPE_COMMAND, cmd.data});
                 break;
             }
             break;
@@ -54,7 +53,7 @@ auto eshell::run(parsed_input &input, int &in) -> void {
                 break;
             }
             case SEPARATOR_PARA: {
-                parallel_plines.push_back(cmd.data.pline);
+                parallel_cmds.push_back({INPUT_TYPE_PIPELINE, cmd.data});
                 break;
             }
             }
@@ -137,15 +136,11 @@ auto eshell::run(parsed_input &input, int &in) -> void {
         pipeline_cmds.clear();
     }
     if (!parallel_cmds.empty()) {
-        execute::execute_parallel(parallel_cmds);
-        parallel_cmds.clear();
-    }
-    if (!parallel_plines.empty()) {
         // HACK: i am not really sure how and why flushing works
         // but it makes it so that i pass my blackbox test
         // it does not make any difference in interactive mode
         // std::flush(std::cout);
-        execute::execute_parallel_pipelines(parallel_plines);
-        parallel_plines.clear();
+        execute::execute_parallel_pipelines(parallel_cmds);
+        parallel_cmds.clear();
     }
 }

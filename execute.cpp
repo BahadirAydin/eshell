@@ -1,17 +1,19 @@
 #include "execute.h"
 #include "eshell.h"
 
-auto execute::failed_to_execute() -> void {
+namespace execute {
+
+auto failed_to_execute() -> void {
     std::cerr << "execute::failed to execute the command" << std::endl;
     exit(1);
 }
 
-auto execute::failed_to_pipe() -> void {
+auto failed_to_pipe() -> void {
     std::cerr << "execute::failed to pipe" << std::endl;
     exit(1);
 }
 
-auto execute::execute_single_command(const command &data, bool wait_) -> void {
+auto execute_single_command(const command &data, bool wait_) -> void {
 
     pid_t child_pid = fork();
     if (child_pid != 0) { // PARENT PROCESS
@@ -24,15 +26,15 @@ auto execute::execute_single_command(const command &data, bool wait_) -> void {
     }
 }
 
-void execute::close_all_pipes(int pipes[][2], size_t n_pipes) {
+void close_all_pipes(int pipes[][2], size_t n_pipes) {
     for (size_t i = 0; i < n_pipes; ++i) {
         close(pipes[i][0]);
         close(pipes[i][1]);
     }
 }
 
-void execute::execute_pipeline(const std::vector<command> &cmds, bool _wait,
-                               int in_fd, int out_fd) {
+void execute_pipeline(const std::vector<command> &cmds, bool _wait, int in_fd,
+                      int out_fd) {
     size_t n_cmds = cmds.size();
     size_t n_pipes = n_cmds - 1;
     if (n_cmds == 0) {
@@ -94,8 +96,7 @@ void execute::execute_pipeline(const std::vector<command> &cmds, bool _wait,
     }
 }
 
-auto execute::execute_parallel(const std::vector<ParallelCommand> &plines)
-    -> void {
+auto execute_parallel(const std::vector<ParallelCommand> &plines) -> void {
     size_t n_plines = plines.size();
     for (size_t i = 0; i < n_plines; i++) {
         if (plines[i].type == SINGLE_INPUT_TYPE::INPUT_TYPE_COMMAND) {
@@ -124,8 +125,7 @@ auto execute::execute_parallel(const std::vector<ParallelCommand> &plines)
     }
 }
 
-auto execute::execute_subshell(char *subshell, int in_fd, bool last)
-    -> SubshellReturn {
+auto execute_subshell(char *subshell, int in_fd, bool last) -> SubshellReturn {
     int pipefd[2];
     if (!last) {
         if (pipe(pipefd) == -1) {
@@ -153,3 +153,4 @@ auto execute::execute_subshell(char *subshell, int in_fd, bool last)
     wait(nullptr);
     return SubshellReturn{{}, return_type::PARENT, pipefd[0]};
 }
+} // namespace execute

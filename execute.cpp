@@ -11,7 +11,7 @@ auto execute::failed_to_pipe() -> void {
     exit(1);
 }
 
-auto execute::execute_single_command(command data, bool wait_) -> void {
+auto execute::execute_single_command(const command &data, bool wait_) -> void {
 
     pid_t child_pid = fork();
     if (child_pid != 0) { // PARENT PROCESS
@@ -25,56 +25,6 @@ auto execute::execute_single_command(command data, bool wait_) -> void {
     }
 }
 
-// fd[0] -> read end
-// fd[1] -> write end
-
-auto execute::execute_pipeline(std::vector<command> &cmds) -> void {
-    size_t n_cmds = cmds.size();
-    // "in" is where the next command will read its input from
-    int in = STDIN_FILENO;
-    for (size_t i = 0; i < n_cmds; i++) {
-        int fd[2];
-        if (i < n_cmds - 1) {
-            // no need to create a pipe for the last command
-            // it will only read from the previous created
-            // then peacefully die
-            if (pipe(fd) < 0) {
-                failed_to_pipe();
-            }
-        }
-        pid_t child_pid = fork();
-        if (child_pid > 0) { // PARENT PROCESS
-            wait(nullptr);   // pipe processes are sequential, we wait and reap
-            if (in != STDIN_FILENO) {
-                // closes the read end of the pipe, each time this is called
-                // a file descriptor is freed and the pipe is closed
-                close(in);
-            }
-            if (i < n_cmds - 1) {
-                close(fd[1]); // closes the write end of the pipe
-                in = fd[0];   // "in" is now the read end of the pipe, next
-                              // command will read from it
-            }
-        } else { // CHILD PROCESS
-            if (in != STDIN_FILENO) {
-                dup2(in, STDIN_FILENO);
-                close(in); // after redirecting the stdin to the pipe, we
-                           // can close the original one
-            }
-            if (i < n_cmds - 1) {
-                // redirects the output to the write end of the pipe
-                // if it is the last command, it will write to the stdout
-                // since there is no more commands to read
-                close(fd[0]);
-                dup2(fd[1], STDOUT_FILENO);
-                close(fd[1]);
-            }
-            execvp(cmds[i].args[0], cmds[i].args);
-            failed_to_execute();
-        }
-    }
-}
-
 void execute::close_all_pipes(int pipes[][2], size_t n_pipes) {
     for (size_t i = 0; i < n_pipes; ++i) {
         close(pipes[i][0]);
@@ -82,8 +32,8 @@ void execute::close_all_pipes(int pipes[][2], size_t n_pipes) {
     }
 }
 
-void execute::execute_pipeline_concurrent(std::vector<command> &cmds,
-                                          bool _wait, int in_fd, int out_fd) {
+void execute::execute_pipeline(const std::vector<command> &cmds, bool _wait,
+                               int in_fd, int out_fd) {
     size_t n_cmds = cmds.size();
     size_t n_pipes = n_cmds - 1;
     if (n_cmds == 0) {
@@ -147,7 +97,7 @@ void execute::execute_pipeline_concurrent(std::vector<command> &cmds,
     }
 }
 
-auto execute::execute_parallel_pipelines(std::vector<ParallelCommand> &plines)
+auto execute::execute_parallel(const std::vector<ParallelCommand> &plines)
     -> void {
     size_t n_plines = plines.size();
     for (size_t i = 0; i < n_plines; i++) {
@@ -160,7 +110,7 @@ auto execute::execute_parallel_pipelines(std::vector<ParallelCommand> &plines)
         for (size_t j = 0; j < n_cmds; j++) {
             cmds[j] = plines[i].data.pline.commands[j];
         }
-        execute_pipeline_concurrent(cmds, false);
+        execute_pipeline(cmds, false);
     }
     // wait for all the children in all parallel subprocesses to finish
     for (size_t i = 0; i < n_plines; i++) {
@@ -172,8 +122,8 @@ auto execute::execute_parallel_pipelines(std::vector<ParallelCommand> &plines)
         for (size_t j = 0; j < n_cmds; j++) {
             wait(nullptr);
         }
-        // i didn't do error handling here but only acceptable types are COMMAND and PIPELINE
-        // other cases should not happen ever.
+        // i didn't do error handling here but only acceptable types are COMMAND
+        // and PIPELINE other cases should not happen ever.
     }
 }
 

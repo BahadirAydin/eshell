@@ -8,11 +8,10 @@ auto eshell::run_pipelined_cmds(const pipeline &p) -> void {
     for (int i = 0; i < num_cmds; i++) {
         cmds[i] = p.commands[i];
     }
-    execute::execute_pipeline_concurrent(cmds, true);
+    execute::execute_pipeline(cmds, true);
 }
 
-// determines the order of the commands from the parsed_input struct
-auto eshell::run(parsed_input &input, int &in) -> void {
+auto eshell::run(const parsed_input &input, int &in) -> void {
     int num_inputs = input.num_inputs;
     std::vector<command> pipeline_cmds;
     std::vector<execute::ParallelCommand> parallel_cmds;
@@ -66,14 +65,12 @@ auto eshell::run(parsed_input &input, int &in) -> void {
                 if (pipe(pipefd) == -1) {
                     execute::failed_to_pipe();
                 }
-                execute::execute_pipeline_concurrent(pipeline_cmds, true, in,
-                                                     pipefd[1]);
+                execute::execute_pipeline(pipeline_cmds, true, in, pipefd[1]);
                 close(pipefd[1]);
                 pipeline_cmds.clear();
                 subshell_return = execute::execute_subshell(cmd.data.subshell,
                                                             pipefd[0], false);
                 if (subshell_return.type == execute::return_type::CHILD) {
-                    in = -1;
                     run(subshell_return.input, in);
                     exit(0);
                 } else {
@@ -85,14 +82,12 @@ auto eshell::run(parsed_input &input, int &in) -> void {
                 if (pipe(pipefd) == -1) {
                     execute::failed_to_pipe();
                 }
-                execute::execute_pipeline_concurrent(pipeline_cmds, true, in,
-                                                     pipefd[1]);
+                execute::execute_pipeline(pipeline_cmds, true, in, pipefd[1]);
                 close(pipefd[1]);
                 pipeline_cmds.clear();
                 subshell_return =
                     execute::execute_subshell(cmd.data.subshell, pipefd[0]);
                 if (subshell_return.type == execute::return_type::CHILD) {
-                    in = -1;
                     run(subshell_return.input, in);
                     exit(0);
                 }
@@ -101,7 +96,6 @@ auto eshell::run(parsed_input &input, int &in) -> void {
                 subshell_return =
                     execute::execute_subshell(cmd.data.subshell, in, false);
                 if (subshell_return.type == execute::return_type::CHILD) {
-                    in = -1;
                     run(subshell_return.input, in);
                     exit(0);
                 } else {
@@ -111,7 +105,6 @@ auto eshell::run(parsed_input &input, int &in) -> void {
                 subshell_return =
                     execute::execute_subshell(cmd.data.subshell, in);
                 if (subshell_return.type == execute::return_type::CHILD) {
-                    in = -1;
                     run(subshell_return.input, in);
                     exit(0);
                 } else {
@@ -121,26 +114,17 @@ auto eshell::run(parsed_input &input, int &in) -> void {
             break;
         }
         case INPUT_TYPE_NON: {
-            // this is not used anywhere in the code idk what it means
             std::cerr << "unknown case" << std::endl;
             exit(1);
         }
         }
     }
     if (!pipeline_cmds.empty()) {
-        if (in != -1) {
-            execute::execute_pipeline_concurrent(pipeline_cmds, true, in);
-        } else {
-            execute::execute_pipeline_concurrent(pipeline_cmds, true);
-        }
+        execute::execute_pipeline(pipeline_cmds, true, in);
         pipeline_cmds.clear();
     }
     if (!parallel_cmds.empty()) {
-        // HACK: i am not really sure how and why flushing works
-        // but it makes it so that i pass my blackbox test
-        // it does not make any difference in interactive mode
-        // std::flush(std::cout);
-        execute::execute_parallel_pipelines(parallel_cmds);
+        execute::execute_parallel(parallel_cmds);
         parallel_cmds.clear();
     }
 }

@@ -2,6 +2,7 @@
 #define EXECUTE_H
 
 #include "parser.h"
+#include <array>
 #include <iostream>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -9,32 +10,18 @@
 
 namespace execute {
 
-enum return_type { CHILD, PARENT };
-
-struct SubshellReturn {
-    parsed_input input;
-    return_type type;
-    int in[2];
-};
-struct ParallelCommand {
-    SINGLE_INPUT_TYPE type;
-    single_input_union data;
-};
-
-auto close_all_pipes(int pipes[][2], size_t n_pipes) -> void;
 auto failed_to_execute() -> void;
 auto failed_to_pipe() -> void;
-auto execute_single_command(const command &data, bool wait_ = true,
-                            int fd[2] = nullptr) -> void;
-// warn: this execute_pipeline function is obsolete
-// i'm using execute_pipeline_concurrent instead
-// this is just here for reference
-auto execute_pipeline(const std::vector<command> &cmds, bool _wait,
-                      int in_fd[2] = nullptr, int out_fd[2] = nullptr) -> void;
-auto execute_parallel(const std::vector<ParallelCommand> &parallel_cmds,
+auto failed_to_fork() -> void;
+auto close_all_pipes(const std::vector<std::array<int, 2>> &pipes) -> void;
+auto wait_all(const std::vector<pid_t> &pids) -> void;
+auto to_stages(const single_input &input) -> std::vector<single_input>;
+auto execute_pipeline(const std::vector<single_input> &stages, int in_fd = -1)
+    -> std::vector<pid_t>;
+auto execute_parallel(const std::vector<single_input> &inputs,
                       bool repeater = false) -> void;
-auto execute_subshell(char *subshell, int in_fd[2] = nullptr, bool last = true)
-    -> SubshellReturn;
+auto execute_repeater(const std::vector<int> &write_fds) -> pid_t;
+auto execute_subshell(const char *subshell, bool repeater) -> void;
 } // namespace execute
 
 #endif // EXECUTE_H

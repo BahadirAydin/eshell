@@ -1,5 +1,8 @@
 #include "execute.h"
 #include "eshell.h"
+#include <csignal>
+#include <fcntl.h>
+#include <string>
 
 namespace execute {
 
@@ -13,194 +16,146 @@ auto failed_to_pipe() -> void {
     exit(1);
 }
 
-auto execute_single_command(const command &data, bool wait_, int fd[2])
-    -> void {
+auto failed_to_fork() -> void {
+    std::cerr << "execute::failed to fork" << std::endl;
+    exit(1);
+}
 
-    pid_t child_pid = fork();
-    if (child_pid != 0) { // PARENT PROCESS
-        if (wait_) {
-            // wait for this child only, not whichever child exits first
-            waitpid(child_pid, nullptr, 0);
-        }
-    } else { // CHILD PROCESS
-        if (fd != nullptr) {
-            close(fd[1]);
-            dup2(fd[0], STDIN_FILENO);
-            close(fd[0]);
-        }
-        execvp(data.args[0], data.args);
-        failed_to_execute();
+auto close_all_pipes(const std::vector<std::array<int, 2>> &pipes) -> void {
+    for (const auto &p : pipes) {
+        close(p[0]);
+        close(p[1]);
     }
 }
 
-void close_all_pipes(int pipes[][2], size_t n_pipes) {
-    for (size_t i = 0; i < n_pipes; ++i) {
-        close(pipes[i][0]);
-        close(pipes[i][1]);
+auto wait_all(const std::vector<pid_t> &pids) -> void {
+    for (pid_t pid : pids) {
+        waitpid(pid, nullptr, 0);
     }
 }
 
-void execute_pipeline(const std::vector<command> &cmds, bool _wait,
-                      int in_fd[2], int out_fd[2]) {
-    size_t n_cmds = cmds.size();
-    size_t n_pipes = n_cmds - 1;
-    if (n_cmds == 0) {
-        return;
+// a single command or subshell is just a pipeline with one stage
+auto to_stages(const single_input &input) -> std::vector<single_input> {
+    if (input.type != INPUT_TYPE_PIPELINE) {
+        return {input};
     }
-    // create n-1 pipes for n commands
-    int pipes[n_pipes][2];
-    for (size_t i = 0; i < n_cmds - 1; ++i) {
-        if (pipe(pipes[i]) < 0) {
+    std::vector<single_input> stages(input.data.pline.num_commands);
+    for (size_t i = 0; i < stages.size(); ++i) {
+        stages[i].type = INPUT_TYPE_COMMAND;
+        stages[i].data.cmd = input.data.pline.commands[i];
+    }
+    return stages;
+}
+
+auto execute_pipeline(const std::vector<single_input> &stages, int in_fd)
+    -> std::vector<pid_t> {
+    size_t n_stages = stages.size();
+    if (n_stages == 0) {
+        return {};
+    }
+    std::vector<std::array<int, 2>> pipes(n_stages - 1);
+    for (auto &p : pipes) {
+        if (pipe(p.data()) == -1) {
             failed_to_pipe();
         }
     }
-    std::vector<pid_t> child_pids(n_cmds);
-    for (size_t i = 0; i < n_cmds; ++i) {
+    // fork everything before waiting, otherwise a stage can block on a full
+    // pipe that no one reads yet
+    std::vector<pid_t> child_pids(n_stages);
+    for (size_t i = 0; i < n_stages; ++i) {
         pid_t child_pid = fork();
-        child_pids[i] = child_pid;
+        if (child_pid == -1) {
+            failed_to_fork();
+        }
         if (child_pid == 0) { // CHILD PROCESS
             if (i > 0) {
-                // redirect input from the previous pipe
                 dup2(pipes[i - 1][0], STDIN_FILENO);
+            } else if (in_fd != -1) {
+                dup2(in_fd, STDIN_FILENO);
+                close(in_fd);
             }
-            if (i < n_cmds - 1) {
-                // redirect output to the next pipe
+            if (i < n_stages - 1) {
                 dup2(pipes[i][1], STDOUT_FILENO);
             }
-            if (i == n_cmds - 1 && out_fd != nullptr) {
-                close(out_fd[0]);
-                dup2(out_fd[1], STDOUT_FILENO);
-                close(out_fd[1]);
-            } else if (out_fd != nullptr) {
-                close(out_fd[0]);
-                close(out_fd[1]);
-            }
-            if (i == 0 && in_fd != nullptr) {
-                close(in_fd[1]);
-                dup2(in_fd[0], STDIN_FILENO);
-                close(in_fd[0]);
-            } else if (in_fd != nullptr) {
-                close(in_fd[0]);
-                close(in_fd[1]);
-            }
+            close_all_pipes(pipes);
 
-            // we call this for every child because
-            // each child has different file descriptors
-            // and we need to close them
-            close_all_pipes(pipes, n_cmds - 1);
-
-            execvp(cmds[i].args[0], cmds[i].args);
+            if (stages[i].type == INPUT_TYPE_SUBSHELL) {
+                // repeater is only needed if something is piped in
+                execute_subshell(stages[i].data.subshell, i > 0 || in_fd != -1);
+            }
+            execvp(stages[i].data.cmd.args[0], stages[i].data.cmd.args);
             failed_to_execute();
         }
+        child_pids[i] = child_pid;
     }
-    // this is for closing the pipes in the parent process
-    close_all_pipes(pipes, n_cmds - 1);
-    if (out_fd != nullptr) {
-        close(out_fd[1]);
-    }
-    if (in_fd != nullptr) {
-        close(in_fd[0]);
-    }
-    // if i want to busy wait for the children to finish
-    // i can call wait here by calling the function with _wait = true
-    // but if i want to execute other commands in parallel
-    // i call the function with _wait = false
-    if (_wait) {
-        for (pid_t pid : child_pids) {
-            waitpid(pid, nullptr, 0);
-        }
-    }
+    close_all_pipes(pipes);
+    return child_pids;
 }
 
-auto execute_parallel(const std::vector<ParallelCommand> &parallel_cmds,
-                      bool repeater) -> void {
-    size_t n_parallel_cmds = parallel_cmds.size();
-    std::vector<int> write_fds(n_parallel_cmds);
-    for (size_t i = 0; i < n_parallel_cmds; i++) {
-        int pipefd[2];
+auto execute_parallel(const std::vector<single_input> &inputs, bool repeater)
+    -> void {
+    std::vector<pid_t> child_pids;
+    std::vector<int> write_fds;
+    for (const single_input &input : inputs) {
+        int in_fd = -1;
         if (repeater) {
-            if (pipe(pipefd) == -1) {
+            int pipefd[2];
+            // cloexec so other branches don't keep this pipe open
+            if (pipe2(pipefd, O_CLOEXEC) == -1) {
                 failed_to_pipe();
             }
-            write_fds[i] = pipefd[1];
+            in_fd = pipefd[0];
+            write_fds.push_back(pipefd[1]);
         }
-        if (parallel_cmds[i].type == SINGLE_INPUT_TYPE::INPUT_TYPE_COMMAND) {
-            if (repeater) {
-                execute_single_command(parallel_cmds[i].data.cmd, false,
-                                       pipefd);
-                close(pipefd[0]);
-                continue;
-            }
-            execute_single_command(parallel_cmds[i].data.cmd, false);
-        } else {
-            size_t n_cmds = parallel_cmds[i].data.pline.num_commands;
-            std::vector<command> cmds(n_cmds);
-            for (int j = 0; j < n_cmds; j++) {
-                cmds[j] = parallel_cmds[i].data.pline.commands[j];
-            }
-            if (repeater) {
-                execute_pipeline(cmds, false, pipefd);
-                close(pipefd[0]);
-                continue;
-            }
-            execute_pipeline(cmds, false);
+        std::vector<pid_t> pids = execute_pipeline(to_stages(input), in_fd);
+        child_pids.insert(child_pids.end(), pids.begin(), pids.end());
+        if (in_fd != -1) {
+            close(in_fd);
         }
     }
-    char buf[4096];
-    ssize_t bytesRead;
-    while ((bytesRead = read(STDIN_FILENO, buf, sizeof(buf))) > 0) {
-        for (int i = 0; i < n_parallel_cmds; i++) {
-            if (write(write_fds[i], buf, bytesRead) != bytesRead) {
-                std::cerr << "write error for " << write_fds[i] << std::endl;
-            }
+    if (repeater) {
+        child_pids.push_back(execute_repeater(write_fds));
+        for (int fd : write_fds) {
+            close(fd);
         }
     }
-    for (int i = 0; i < n_parallel_cmds; i++) {
-        close(write_fds[i]);
-    }
-    // wait for all the children in all parallel subprocesses to finish
-    for (size_t i = 0; i < n_parallel_cmds; i++) {
-        if (parallel_cmds[i].type == SINGLE_INPUT_TYPE::INPUT_TYPE_COMMAND) {
-            wait(nullptr);
-            continue;
-        }
-        int n_cmds = parallel_cmds[i].data.pline.num_commands;
-        for (size_t j = 0; j < n_cmds; j++) {
-            wait(nullptr);
-        }
-        // i didn't do error handling here but only acceptable types are
-        // COMMAND and PIPELINE other cases should not happen ever.
-    }
+    wait_all(child_pids);
 }
 
-auto execute_subshell(char *subshell, int in_fd[2], bool last)
-    -> SubshellReturn {
-    int pipefd[2];
-    if (!last) {
-        if (pipe(pipefd) == -1) {
-            failed_to_pipe();
-        }
-    }
+auto execute_repeater(const std::vector<int> &write_fds) -> pid_t {
     pid_t child_pid = fork();
-    if (child_pid == 0) { // CHILD PROCESS
-        if (!last) {
-            close(pipefd[0]);
-            dup2(pipefd[1], STDOUT_FILENO);
-            close(pipefd[1]);
-        }
-        if (in_fd != nullptr) {
-            close(in_fd[1]);
-            dup2(in_fd[0], STDIN_FILENO);
-            close(in_fd[0]);
-        }
-        parsed_input input;
-        parse_line(subshell, &input);
-        return SubshellReturn{input, return_type::CHILD, {}};
+    if (child_pid == -1) {
+        failed_to_fork();
     }
-    if (!last) {
-        close(pipefd[1]);
+    if (child_pid != 0) { // PARENT PROCESS
+        return child_pid;
     }
-    waitpid(child_pid, nullptr, 0);
-    return SubshellReturn{{}, return_type::PARENT, {pipefd[0], pipefd[1]}};
+    // CHILD PROCESS
+    // a branch may exit before reading everything, just stop writing to it
+    signal(SIGPIPE, SIG_IGN);
+    std::vector<int> fds = write_fds;
+    char buf[4096];
+    ssize_t bytesRead;
+    while (!fds.empty() &&
+           (bytesRead = read(STDIN_FILENO, buf, sizeof(buf))) > 0) {
+        for (size_t i = 0; i < fds.size();) {
+            if (write(fds[i], buf, bytesRead) != bytesRead) {
+                close(fds[i]);
+                fds.erase(fds.begin() + i);
+            } else {
+                ++i;
+            }
+        }
+    }
+    exit(0);
+}
+
+auto execute_subshell(const char *subshell, bool repeater) -> void {
+    std::string line(subshell);
+    parsed_input input;
+    parse_line(line.data(), &input);
+    eshell::run(input, repeater);
+    free_parsed_input(&input);
+    exit(0);
 }
 } // namespace execute

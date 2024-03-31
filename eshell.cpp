@@ -1,6 +1,4 @@
 #include "eshell.h"
-#include "execute.h"
-#include "parser.h"
 
 namespace eshell {
 
@@ -13,7 +11,7 @@ auto run_pipelined_cmds(const pipeline &p) -> void {
     execute::execute_pipeline(cmds, true);
 }
 
-auto run(const parsed_input &input, int &in) -> void {
+auto run(const parsed_input &input, int in[2], bool repeater) -> void {
     int num_inputs = input.num_inputs;
     std::vector<command> pipeline_cmds;
     std::vector<execute::ParallelCommand> parallel_cmds;
@@ -67,11 +65,11 @@ auto run(const parsed_input &input, int &in) -> void {
                 if (pipe(pipefd) == -1) {
                     execute::failed_to_pipe();
                 }
-                execute::execute_pipeline(pipeline_cmds, true, in, pipefd[1]);
+                execute::execute_pipeline(pipeline_cmds, true, in, pipefd);
                 close(pipefd[1]);
                 pipeline_cmds.clear();
-                subshell_return = execute::execute_subshell(cmd.data.subshell,
-                                                            pipefd[0], false);
+                subshell_return =
+                    execute::execute_subshell(cmd.data.subshell, pipefd, false);
                 if (subshell_return.type == execute::return_type::CHILD) {
                     run(subshell_return.input, in);
                     exit(0);
@@ -84,13 +82,13 @@ auto run(const parsed_input &input, int &in) -> void {
                 if (pipe(pipefd) == -1) {
                     execute::failed_to_pipe();
                 }
-                execute::execute_pipeline(pipeline_cmds, true, in, pipefd[1]);
+                execute::execute_pipeline(pipeline_cmds, true, in, pipefd);
                 close(pipefd[1]);
                 pipeline_cmds.clear();
                 subshell_return =
-                    execute::execute_subshell(cmd.data.subshell, pipefd[0]);
+                    execute::execute_subshell(cmd.data.subshell, pipefd);
                 if (subshell_return.type == execute::return_type::CHILD) {
-                    run(subshell_return.input, in);
+                    run(subshell_return.input, in, true);
                     exit(0);
                 }
                 close(pipefd[0]);
@@ -98,7 +96,7 @@ auto run(const parsed_input &input, int &in) -> void {
                 subshell_return =
                     execute::execute_subshell(cmd.data.subshell, in, false);
                 if (subshell_return.type == execute::return_type::CHILD) {
-                    run(subshell_return.input, in);
+                    run(subshell_return.input, in, true);
                     exit(0);
                 } else {
                     in = subshell_return.in;
@@ -107,7 +105,7 @@ auto run(const parsed_input &input, int &in) -> void {
                 subshell_return =
                     execute::execute_subshell(cmd.data.subshell, in);
                 if (subshell_return.type == execute::return_type::CHILD) {
-                    run(subshell_return.input, in);
+                    run(subshell_return.input, in, true);
                     exit(0);
                 } else {
                     in = subshell_return.in;
@@ -126,7 +124,16 @@ auto run(const parsed_input &input, int &in) -> void {
         pipeline_cmds.clear();
     }
     if (!parallel_cmds.empty()) {
-        execute::execute_parallel(parallel_cmds);
+        if (repeater) {
+            size_t n_cmds = parallel_cmds.size();
+            if (fork() == 0) { // CHILD REPEATER PROCESS
+                execute::execute_parallel(parallel_cmds, true);
+            } else { // PARENT SUBSHELL PROCESS
+                wait(nullptr);
+            }
+        } else {
+            execute::execute_parallel(parallel_cmds);
+        }
         parallel_cmds.clear();
     }
 }

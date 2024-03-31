@@ -33,8 +33,7 @@ auto main() -> int {
         std::flush(std::cout);
         parse_line(line, &input);
         // pretty_print(&input);
-        int in = -1;
-        eshell::run(input, in);
+        eshell::run(input);
         free_parsed_input(&input);
     }
     return 0;

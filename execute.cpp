@@ -112,6 +112,7 @@ void execute_pipeline(const std::vector<command> &cmds, bool _wait,
 auto execute_parallel(const std::vector<ParallelCommand> &parallel_cmds,
                       bool repeater) -> void {
     size_t n_parallel_cmds = parallel_cmds.size();
+    int child_count = 0;
     std::vector<int> write_fds(n_parallel_cmds);
     for (size_t i = 0; i < n_parallel_cmds; i++) {
         int pipefd[2];
@@ -122,6 +123,7 @@ auto execute_parallel(const std::vector<ParallelCommand> &parallel_cmds,
             write_fds[i] = pipefd[1];
         }
         if (parallel_cmds[i].type == SINGLE_INPUT_TYPE::INPUT_TYPE_COMMAND) {
+            child_count++;
             if (repeater) {
                 execute_single_command(parallel_cmds[i].data.cmd, false,
                                        pipefd);
@@ -131,6 +133,7 @@ auto execute_parallel(const std::vector<ParallelCommand> &parallel_cmds,
             execute_single_command(parallel_cmds[i].data.cmd, false);
         } else {
             size_t n_cmds = parallel_cmds[i].data.pline.num_commands;
+            child_count += n_cmds;
             std::vector<command> cmds(n_cmds);
             for (int j = 0; j < n_cmds; j++) {
                 cmds[j] = parallel_cmds[i].data.pline.commands[j];
@@ -143,30 +146,30 @@ auto execute_parallel(const std::vector<ParallelCommand> &parallel_cmds,
             execute_pipeline(cmds, false);
         }
     }
-    char buf[4096];
-    ssize_t bytesRead;
-    while ((bytesRead = read(STDIN_FILENO, buf, sizeof(buf))) > 0) {
-        for (int i = 0; i < n_parallel_cmds; i++) {
-            if (write(write_fds[i], buf, bytesRead) != bytesRead) {
-                std::cerr << "write error for " << write_fds[i] << std::endl;
+    if (repeater) {
+        char buf[4096];
+        ssize_t bytesRead;
+        while ((bytesRead = read(STDIN_FILENO, buf, sizeof(buf))) > 0) {
+            int c_exit = waitpid(-1, nullptr, WNOHANG);
+            if (c_exit > 0) {
+                child_count--;
+            }
+            if (child_count == 0) {
+                break;
+            }
+            for (int i = 0; i < n_parallel_cmds; i++) {
+                if (write(write_fds[i], buf, bytesRead) != bytesRead) {
+                    perror("write error");
+                }
             }
         }
-    }
-    for (int i = 0; i < n_parallel_cmds; i++) {
-        close(write_fds[i]);
+        for (int i = 0; i < n_parallel_cmds; i++) {
+            close(write_fds[i]);
+        }
     }
     // wait for all the children in all parallel subprocesses to finish
-    for (size_t i = 0; i < n_parallel_cmds; i++) {
-        if (parallel_cmds[i].type == SINGLE_INPUT_TYPE::INPUT_TYPE_COMMAND) {
-            wait(nullptr);
-            continue;
-        }
-        int n_cmds = parallel_cmds[i].data.pline.num_commands;
-        for (size_t j = 0; j < n_cmds; j++) {
-            wait(nullptr);
-        }
-        // i didn't do error handling here but only acceptable types are
-        // COMMAND and PIPELINE other cases should not happen ever.
+    for (size_t i = 0; i < child_count; i++) {
+        wait(nullptr);
     }
 }
 

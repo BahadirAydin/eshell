@@ -5,12 +5,12 @@
 #include "parser.h"
 #include <array>
 #include <iostream>
-#include <optional>
 #include <vector>
 
 namespace eshell {
 auto run_pipelined_cmds(const pipeline &p) -> void;
-auto run(const parsed_input &input, int &in) -> void;
+auto run(const parsed_input &input, int in[2] = nullptr, bool repeater = false)
+    -> void;
 } // namespace eshell
 
 #endif // ESHELL_H

@@ -26,9 +26,6 @@ auto failed_to_execute() -> void;
 auto failed_to_pipe() -> void;
 auto execute_single_command(const command &data, bool wait_ = true,
                             int fd[2] = nullptr) -> void;
-// warn: this execute_pipeline function is obsolete
-// i'm using execute_pipeline_concurrent instead
-// this is just here for reference
 auto execute_pipeline(const std::vector<command> &cmds, bool _wait,
                       int in_fd[2] = nullptr, int out_fd[2] = nullptr) -> void;
 auto execute_parallel(const std::vector<ParallelCommand> &parallel_cmds,

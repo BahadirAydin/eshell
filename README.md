@@ -30,15 +30,13 @@ I'm not counting parser.h and parser.c here because it was written by TA.
 
 | Command | Mean [ms] | Min [ms] | Max [ms] | Relative |
 |:---|---:|---:|---:|---:|
-| `echo 'find . -name "*.txt" \| sort ' \| ./eshell ` | 6.8 ± 1.7 | 3.7 | 10.4 | 1.00 |
-| `echo 'find . -name "*.txt" \| sort ' \| bash ` | 10.7 ± 0.9 | 7.9 | 11.9 | 1.58 ± 0.42 |
-
+| `echo 'find . -name "*.txt" \| sort ' \| ./eshell` | 6.8 ± 1.7 | 3.7 | 10.4 | 1.00 |
+| `echo 'find . -name "*.txt" \| sort ' \| bash` | 10.7 ± 0.9 | 7.9 | 11.9 | 1.58 ± 0.42 |
 
 | Command | Mean [s] | Min [s] | Max [s] | Relative |
 |:---|---:|---:|---:|---:|
-| `echo 'ls -R / \| sort \| wc -l ' \| ./eshell` | 3.000 ± 0.141 | 2.871 | 3.241 | 1.02 ± 0.05 |
-| `echo 'ls -R / \| sort \| wcl -l' \| bash` | 2.940 ± 0.021 | 2.911 | 2.973 | 1.00 |
-
+| `echo 'ls -R / \| sort \| wc -l ' \| ./eshell` | 2.940 ± 0.143 | 2.801 | 3.146 | 1.00 |
+| `echo 'ls -R / \| sort \| wc -l' \| bash` | 3.152 ± 0.025 | 3.116 | 3.182 | 1.07 ± 0.05 |
 
 | Command | Mean [s] | Min [s] | Max [s] | Relative |
 |:---|---:|---:|---:|---:|
